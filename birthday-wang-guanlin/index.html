@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>致汪冠霖 · 生日快乐</title>
+<meta name="description" content="一份只属于汪冠霖的生日礼物">
+<style>
+  :root{
+    --gold:#e8c47c;
+    --gold-bright:#ffe3a3;
+    --ink:#f5efe2;
+    --dim:rgba(245,239,226,.55);
+    --faint:rgba(245,239,226,.32);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:"Noto Serif SC","Songti SC",STSong,SimSun,serif;
+    color:var(--ink);
+    background:radial-gradient(120% 90% at 50% 110%, #1b2650 0%, #101a3c 38%, #070b1f 100%);
+    overflow:hidden;
+    user-select:none;
+  }
+  #sky{position:fixed;inset:0;width:100%;height:100%;display:block}
+
+  /* 月亮 */
+  .moon{
+    position:fixed;top:9%;right:11%;width:70px;height:70px;border-radius:50%;
+    background:radial-gradient(circle at 38% 36%, #fff7e0 0%, #f4e3b2 55%, #e8cd8c 100%);
+    box-shadow:0 0 40px 12px rgba(244,224,168,.28), 0 0 120px 50px rgba(244,224,168,.10);
+    opacity:0;animation:moonrise 3s ease .4s forwards;
+  }
+  @keyframes moonrise{to{opacity:.95}}
+
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  section{
+    position:absolute;inset:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+    padding:24px;text-align:center;
+    overflow-y:auto;
+    transition:opacity 1.6s ease;
+  }
+  /* 内容矮时垂直居中,超高时可滚动且顶部不被裁剪 */
+  section::before,section::after{content:"";flex:1 0 0}
+  @media (max-height:660px){
+    #reveal h1{margin-bottom:2.4vh}
+    .letter{gap:1.3vh}
+    #reveal .end-hint{margin-top:3.2vh}
+  }
+  section.gone{opacity:0;pointer-events:none}
+  section.waiting{opacity:0;pointer-events:none}
+
+  /* ---------- 第一幕:蛋糕与蜡烛 ---------- */
+  .pre-line{
+    font-size:clamp(15px,2.4vw,19px);letter-spacing:.55em;text-indent:.55em;
+    color:var(--dim);margin-bottom:6vh;
+    opacity:0;animation:rise 2.2s ease .8s forwards;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+  .cake-wrap{opacity:0;animation:rise 2.2s ease 1.6s forwards}
+  .cake-wrap svg{width:min(72vw,340px);height:auto;overflow:visible}
+
+  .stroke{fill:none;stroke:var(--gold);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .fill-warm{fill:rgba(232,196,124,.07)}
+
+  .candle{cursor:pointer}
+  .flame{
+    fill:url(#flameGrad);
+    transform-origin:center 88%;
+    transform-box:fill-box;
+    animation:flicker 1.9s ease-in-out infinite;
+    filter:drop-shadow(0 0 6px rgba(255,214,140,.9)) drop-shadow(0 0 18px rgba(255,190,90,.45));
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .candle:nth-of-type(2) .flame{animation-delay:-.7s}
+  .candle:nth-of-type(3) .flame{animation-delay:-1.3s}
+  .candle:nth-of-type(4) .flame{animation-delay:-.35s}
+  .candle:nth-of-type(5) .flame{animation-delay:-1.65s}
+  @keyframes flicker{
+    0%,100%{transform:scaleY(1) skewX(0deg)}
+    25%{transform:scaleY(1.12) skewX(2.5deg)}
+    50%{transform:scaleY(.94) skewX(-2deg)}
+    75%{transform:scaleY(1.07) skewX(1.5deg)}
+  }
+  .halo{fill:rgba(255,214,140,.10);transition:opacity .5s ease}
+  .candle.out .flame{opacity:0;transform:scaleY(.2)}
+  .candle.out .halo{opacity:0}
+  .smoke{
+    fill:none;stroke:rgba(245,239,226,.5);stroke-width:1.4;stroke-linecap:round;
+    opacity:0;
+  }
+  .candle.out .smoke{animation:puff 2.6s ease-out forwards}
+  @keyframes puff{
+    0%{opacity:0;transform:translateY(0)}
+    12%{opacity:.8}
+    100%{opacity:0;transform:translateY(-34px)}
+  }
+
+  .hint{
+    margin-top:5vh;font-size:clamp(14px,2.2vw,17px);letter-spacing:.3em;text-indent:.3em;
+    color:var(--faint);
+    opacity:0;animation:rise 2.2s ease 2.6s forwards, breathe 3.4s ease-in-out 5s infinite;
+  }
+  @keyframes breathe{0%,100%{color:var(--faint)}50%{color:var(--dim)}}
+
+  /* ---------- 第二幕:祝福 ---------- */
+  #reveal .small-cap{
+    font-size:clamp(14px,2.2vw,18px);letter-spacing:.9em;text-indent:.9em;
+    color:var(--dim);margin-bottom:3.2vh;
+    opacity:0;transform:translateY(16px);
+  }
+  #reveal h1{
+    font-size:clamp(52px,13vw,96px);font-weight:600;letter-spacing:.18em;text-indent:.18em;
+    background:linear-gradient(180deg,#fff3d6 0%,var(--gold-bright) 45%,#d9a95e 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 60px rgba(255,215,140,.25);
+    margin-bottom:4.5vh;
+    opacity:0;transform:translateY(16px);
+  }
+  .letter{display:flex;flex-direction:column;gap:2.1vh}
+  .letter p{
+    font-size:clamp(15px,2.6vw,19px);letter-spacing:.18em;line-height:1.9;
+    color:rgba(245,239,226,.88);
+    opacity:0;transform:translateY(16px);
+  }
+  .letter p em{font-style:normal;color:var(--gold-bright)}
+  #reveal .end-hint{
+    margin-top:5.5vh;font-size:clamp(12px,2vw,14px);letter-spacing:.3em;text-indent:.3em;
+    color:var(--faint);opacity:0;transform:translateY(16px);
+  }
+  #reveal .shown{animation:bloom 2s cubic-bezier(.2,.7,.3,1) forwards}
+  @keyframes bloom{to{opacity:1;transform:none}}
+
+  /* 音乐开关 */
+  #mute{
+    position:fixed;top:max(18px,env(safe-area-inset-top));right:18px;z-index:9;
+    width:40px;height:40px;border-radius:50%;
+    border:1px solid rgba(232,196,124,.4);background:rgba(7,11,31,.35);
+    color:var(--gold);font-size:16px;cursor:pointer;
+    display:none;align-items:center;justify-content:center;
+    backdrop-filter:blur(4px);
+    transition:opacity .6s ease;font-family:inherit;
+  }
+  #mute.show{display:flex}
+</style>
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+<div class="moon"></div>
+<button id="mute" aria-label="音乐开关">♪</button>
+
+<div id="stage">
+
+  <!-- 第一幕 -->
+  <section id="intro">
+    <p class="pre-line">今夜 · 只为一个人亮起</p>
+
+    <div class="cake-wrap">
+      <svg viewBox="0 0 360 310" xmlns="http://www.w3.org/2000/svg" aria-label="生日蛋糕">
+        <defs>
+          <radialGradient id="flameGrad" cx="50%" cy="65%" r="65%">
+            <stop offset="0%" stop-color="#fff9e6"/>
+            <stop offset="45%" stop-color="#ffd88a"/>
+            <stop offset="100%" stop-color="#f2a24b"/>
+          </radialGradient>
+        </defs>
+
+        <!-- 托盘 -->
+        <ellipse class="stroke" cx="180" cy="281" rx="142" ry="11"/>
+        <path class="stroke" d="M60 296 h240" opacity=".5"/>
+
+        <!-- 下层 -->
+        <rect class="stroke fill-warm" x="72" y="208" width="216" height="66" rx="10"/>
+        <path class="stroke" d="M72 232 q 13.5 14 27 0 t 27 0 t 27 0 t 27 0 t 27 0 t 27 0 t 27 0 t 27 0" opacity=".85"/>
+
+        <!-- 上层 -->
+        <rect class="stroke fill-warm" x="106" y="158" width="148" height="50" rx="9"/>
+        <path class="stroke" d="M106 178 q 12.3 12 24.6 0 t 24.7 0 t 24.7 0 t 24.7 0 t 24.6 0" opacity=".85"/>
+
+        <!-- 点缀 -->
+        <circle class="stroke" cx="100" cy="256" r="3.2" opacity=".6"/>
+        <circle class="stroke" cx="180" cy="260" r="3.2" opacity=".6"/>
+        <circle class="stroke" cx="260" cy="256" r="3.2" opacity=".6"/>
+
+        <!-- 蜡烛 × 5 -->
+        <g class="candle" data-i="0">
+          <ellipse class="halo" cx="112" cy="118" rx="24" ry="28"/>
+          <rect class="stroke fill-warm" x="107" y="130" width="10" height="28" rx="3"/>
+          <line class="stroke" x1="112" y1="130" x2="112" y2="124" opacity=".8"/>
+          <path class="flame" d="M112 102 q 8 12 0 22 q -8 -10 0 -22 z"/>
+          <path class="smoke" d="M112 122 q -5 -8 0 -15 q 5 -7 -1 -14"/>
+          <rect x="92" y="90" width="40" height="72" fill="transparent"/>
+        </g>
+        <g class="candle" data-i="1">
+          <ellipse class="halo" cx="146" cy="108" rx="25" ry="29"/>
+          <rect class="stroke fill-warm" x="141" y="120" width="10" height="38" rx="3"/>
+          <line class="stroke" x1="146" y1="120" x2="146" y2="114" opacity=".8"/>
+          <path class="flame" d="M146 92 q 8 12 0 22 q -8 -10 0 -22 z"/>
+          <path class="smoke" d="M146 112 q -5 -8 0 -15 q 5 -7 -1 -14"/>
+          <rect x="126" y="80" width="40" height="82" fill="transparent"/>
+        </g>
+        <g class="candle" data-i="2">
+          <ellipse class="halo" cx="180" cy="100" rx="26" ry="30"/>
+          <rect class="stroke fill-warm" x="175" y="112" width="10" height="46" rx="3"/>
+          <line class="stroke" x1="180" y1="112" x2="180" y2="106" opacity=".8"/>
+          <path class="flame" d="M180 84 q 8 12 0 22 q -8 -10 0 -22 z"/>
+          <path class="smoke" d="M180 104 q -5 -8 0 -15 q 5 -7 -1 -14"/>
+          <rect x="160" y="72" width="40" height="90" fill="transparent"/>
+        </g>
+        <g class="candle" data-i="3">
+          <ellipse class="halo" cx="214" cy="108" rx="25" ry="29"/>
+          <rect class="stroke fill-warm" x="209" y="120" width="10" height="38" rx="3"/>
+          <line class="stroke" x1="214" y1="120" x2="214" y2="114" opacity=".8"/>
+          <path class="flame" d="M214 92 q 8 12 0 22 q -8 -10 0 -22 z"/>
+          <path class="smoke" d="M214 112 q -5 -8 0 -15 q 5 -7 -1 -14"/>
+          <rect x="194" y="80" width="40" height="82" fill="transparent"/>
+        </g>
+        <g class="candle" data-i="4">
+          <ellipse class="halo" cx="248" cy="118" rx="24" ry="28"/>
+          <rect class="stroke fill-warm" x="243" y="130" width="10" height="28" rx="3"/>
+          <line class="stroke" x1="248" y1="130" x2="248" y2="124" opacity=".8"/>
+          <path class="flame" d="M248 102 q 8 12 0 22 q -8 -10 0 -22 z"/>
+          <path class="smoke" d="M248 122 q -5 -8 0 -15 q 5 -7 -1 -14"/>
+          <rect x="228" y="90" width="40" height="72" fill="transparent"/>
+        </g>
+      </svg>
+    </div>
+
+    <p class="hint" id="hint">轻触烛火 · 许下五个心愿</p>
+  </section>
+
+  <!-- 第二幕 -->
+  <section id="reveal" class="waiting">
+    <p class="small-cap seq">生日快乐</p>
+    <h1 class="seq">汪冠霖</h1>
+    <div class="letter">
+      <p class="seq">又是一年今天。</p>
+      <p class="seq">愿你新的一岁，睡得安稳，笑得开心；</p>
+      <p class="seq">烦恼绕道走，好运常来敲门；</p>
+      <p class="seq">想要的都得到，得不到的都释怀。</p>
+      <p class="seq">生日快乐。</p>
+    </div>
+    <p class="end-hint seq">点一点夜空 · 为自己再放一朵烟花</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 星空 & 烟花 ================= */
+  const cv = document.getElementById('sky');
+  const ctx = cv.getContext('2d');
+  let W, H, DPR;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const stars = [];
+  for (let i = 0; i < 170; i++){
+    stars.push({
+      x: Math.random(), y: Math.random() * 0.92,
+      r: Math.random() * 1.3 + 0.3,
+      p: Math.random() * Math.PI * 2,
+      s: 0.4 + Math.random() * 1.2
+    });
+  }
+
+  let meteor = null, meteorTimer = 4 + Math.random() * 5;
+  const rockets = [], sparks = [];
+  const PALETTE = ['#ffe3a3','#ffd0e0','#c3d9ff','#ffeecb','#f7b7c8','#d8c9ff'];
+
+  function launch(tx, ty){
+    rockets.push({
+      x: tx, y: H + 10, tx, ty,
+      vy: -(H * 0.011 + Math.random() * H * 0.003),
+      color: PALETTE[(Math.random() * PALETTE.length) | 0]
+    });
+  }
+  function burst(x, y, color){
+    const n = 70 + (Math.random() * 40 | 0);
+    for (let i = 0; i < n; i++){
+      const a = (i / n) * Math.PI * 2 + Math.random() * 0.15;
+      const sp = (1.4 + Math.random() * 2.6) * Math.min(W, H) / 480;
+      sparks.push({
+        x, y,
+        vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+        life: 1, decay: 0.008 + Math.random() * 0.012,
+        color: Math.random() < 0.25 ? '#fff7e6' : color
+      });
+    }
+  }
+
+  let showActive = false, showUntil = 0, lastAuto = 0;
+  function startShow(sec){
+    showActive = true;
+    showUntil = performance.now() + sec * 1000;
+  }
+
+  let prev = performance.now();
+  function frame(now){
+    const dt = Math.min((now - prev) / 1000, 0.05);
+    prev = now;
+    ctx.clearRect(0, 0, W, H);
+
+    // 星
+    for (const st of stars){
+      st.p += dt * st.s;
+      const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(st.p));
+      ctx.globalAlpha = tw * 0.9;
+      ctx.fillStyle = '#f5efe2';
+      ctx.beginPath();
+      ctx.arc(st.x * W, st.y * H, st.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 流星
+    meteorTimer -= dt;
+    if (meteorTimer <= 0 && !meteor){
+      meteor = { x: W * (0.15 + Math.random() * 0.6), y: H * 0.08, vx: W * 0.5, vy: W * 0.22, life: 1 };
+      meteorTimer = 7 + Math.random() * 8;
+    }
+    if (meteor){
+      meteor.x += meteor.vx * dt; meteor.y += meteor.vy * dt; meteor.life -= dt * 1.4;
+      if (meteor.life > 0){
+        const g = ctx.createLinearGradient(meteor.x, meteor.y, meteor.x - 110, meteor.y - 48);
+        g.addColorStop(0, 'rgba(255,240,210,' + (0.85 * meteor.life) + ')');
+        g.addColorStop(1, 'rgba(255,240,210,0)');
+        ctx.strokeStyle = g; ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(meteor.x, meteor.y);
+        ctx.lineTo(meteor.x - 110, meteor.y - 48);
+        ctx.stroke();
+      } else meteor = null;
+    }
+
+    // 烟花表演期间自动发射
+    if (showActive){
+      if (now < showUntil && now - lastAuto > 420 + Math.random() * 500){
+        launch(W * (0.12 + Math.random() * 0.76), H * (0.12 + Math.random() * 0.32));
+        lastAuto = now;
+      }
+      if (now >= showUntil && rockets.length === 0 && sparks.length === 0) showActive = false;
+    }
+
+    // 上升的烟花弹
+    for (let i = rockets.length - 1; i >= 0; i--){
+      const r = rockets[i];
+      r.y += r.vy;
+      ctx.fillStyle = 'rgba(255,235,190,.9)';
+      ctx.beginPath(); ctx.arc(r.x, r.y, 1.6, 0, Math.PI * 2); ctx.fill();
+      if (r.y <= r.ty){ burst(r.x, r.ty, r.color); rockets.splice(i, 1); }
+    }
+
+    // 火花
+    for (let i = sparks.length - 1; i >= 0; i--){
+      const s = sparks[i];
+      s.x += s.vx; s.y += s.vy;
+      s.vy += 0.022; s.vx *= 0.985; s.vy *= 0.985;
+      s.life -= s.decay;
+      if (s.life <= 0){ sparks.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.max(s.life, 0);
+      ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.arc(s.x, s.y, 1.7 * s.life + 0.4, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ================= 八音盒 · 生日歌 ================= */
+  let ac = null, muted = false, loopTimer = null;
+  const muteBtn = document.getElementById('mute');
+  const FREQ = { G4:392.00, A4:440.00, B4:493.88, C5:523.25, D5:587.33, E5:659.25, F5:698.46, G5:783.99 };
+  // [音名, 拍数] —— 三拍子《生日快乐》
+  const MELODY = [
+    ['G4',.75],['G4',.25],['A4',1],['G4',1],['C5',1],['B4',2],
+    ['G4',.75],['G4',.25],['A4',1],['G4',1],['D5',1],['C5',2],
+    ['G4',.75],['G4',.25],['G5',1],['E5',1],['C5',1],['B4',1],['A4',2],
+    ['F5',.75],['F5',.25],['E5',1],['C5',1],['D5',1],['C5',3]
+  ];
+  const BEAT = 0.52;
+
+  function pluck(freq, t){
+    const o1 = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
+    o1.type = 'sine'; o1.frequency.value = freq;
+    o2.type = 'triangle'; o2.frequency.value = freq * 2;
+    const g2 = ac.createGain(); g2.gain.value = 0.18;
+    o2.connect(g2); g2.connect(g); o1.connect(g);
+    g.connect(ac.destination);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.11, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.4);
+    o1.start(t); o2.start(t);
+    o1.stop(t + 1.5); o2.stop(t + 1.5);
+  }
+  function playMelody(){
+    if (!ac || muted) return;
+    let t = ac.currentTime + 0.1;
+    for (const [n, b] of MELODY){ pluck(FREQ[n], t); t += b * BEAT; }
+    loopTimer = setTimeout(playMelody, (t - ac.currentTime + 2.5) * 1000);
+  }
+  function startMusic(){
+    try{
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      playMelody();
+      muteBtn.classList.add('show');
+    }catch(e){}
+  }
+  muteBtn.addEventListener('click', function(){
+    muted = !muted;
+    muteBtn.style.opacity = muted ? 0.4 : 1;
+    muteBtn.style.textDecoration = muted ? 'line-through' : 'none';
+    if (muted){ clearTimeout(loopTimer); }
+    else { playMelody(); }
+  });
+
+  /* ================= 剧情:吹蜡烛 → 揭幕 ================= */
+  const candles = document.querySelectorAll('.candle');
+  const hint = document.getElementById('hint');
+  const intro = document.getElementById('intro');
+  const reveal = document.getElementById('reveal');
+  const TOTAL_WISHES = candles.length;
+  const WISH_HINTS = ['还有四个心愿', '还有三个心愿', '还有两个心愿', '最后一个心愿'];
+  let out = 0, revealed = false;
+
+  candles.forEach(function(c){
+    c.addEventListener('click', function(){
+      if (c.classList.contains('out')) return;
+      c.classList.add('out');
+      out++;
+      if (out < TOTAL_WISHES){
+        hint.textContent = WISH_HINTS[out - 1];
+      } else {
+        hint.textContent = '';
+        setTimeout(beginReveal, 1100);
+      }
+    });
+  });
+
+  function beginReveal(){
+    if (revealed) return;
+    revealed = true;
+    startMusic();
+    startShow(9);
+    intro.classList.add('gone');
+    setTimeout(function(){
+      reveal.classList.remove('waiting');
+      const lines = reveal.querySelectorAll('.seq');
+      lines.forEach(function(el, i){
+        setTimeout(function(){ el.classList.add('shown'); }, 600 + i * 950);
+      });
+      // 揭幕后:点夜空放烟花
+      setTimeout(function(){
+        document.addEventListener('pointerdown', function(e){
+          if (e.target.closest('#mute')) return;
+          launch(e.clientX, Math.min(e.clientY, H * 0.6));
+        });
+      }, 1500);
+    }, 900);
+  }
+})();
+</script>
+</body>
+</html>

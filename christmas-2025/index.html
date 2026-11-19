@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 圣诞树 - 极速本地版 (MediaPipe)</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Segoe UI', sans-serif; color: #fff; }
+        #canvas-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        
+        #ui-layer {
+            position: absolute; bottom: 20px; left: 20px; z-index: 10;
+            display: flex; gap: 20px; align-items: flex-end;
+            pointer-events: none;
+        }
+
+        .panel {
+            background: rgba(20, 20, 20, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            padding: 20px;
+            border-radius: 16px;
+            pointer-events: auto;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        #video-container { 
+            width: 240px; height: 180px; 
+            background: #000; border-radius: 12px; 
+            overflow: hidden; position: relative; 
+            border: 2px solid #333;
+        }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        
+        /* 关键点绘制层 */
+        #output_canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+
+        #status-panel { min-width: 280px; }
+        h1 { margin: 0 0 15px 0; font-size: 20px; color: #4db6ac; display: flex; align-items: center; gap: 10px; }
+        .badge { background: #4db6ac; color: #000; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        
+        .status-row { margin-bottom: 8px; font-size: 15px; display: flex; justify-content: space-between; }
+        .label { color: #888; }
+        .value { font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.3); }
+        
+        #gesture-value { color: #ffd700; font-size: 18px; }
+
+        .guide-list { margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; }
+        .guide-item { font-size: 13px; color: #aaa; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+        .guide-item span { color: #fff; font-weight: bold; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px; }
+
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            z-index: 100; background: rgba(0,0,0,0.9); padding: 40px; border-radius: 20px;
+            text-align: center; border: 1px solid #444;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #333; border-top: 4px solid #4db6ac;
+            border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        button#start-btn {
+            background: #4db6ac; border: none; color: #000; padding: 10px 20px;
+            font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 20px;
+            font-size: 16px; display: none;
+        }
+        button#start-btn:hover { background: #80cbc4; }
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="loading">
+        <div class="spinner"></div>
+        <h2 id="loading-text">正在下载 AI 模型...<br><span style="font-size:12px; color:#888;">(约 10MB，首次加载稍慢)</span></h2>
+        <button id="start-btn">开启摄像头体验</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui-layer">
+        <div class="panel">
+            <div id="video-container">
+                <video id="webcam" autoplay playsinline></video>
+                <canvas id="output_canvas"></canvas>
+            </div>
+            <div style="text-align: center; font-size: 12px; color: #666; margin-top: 8px;">
+                MediaPipe 极速本地识别
+            </div>
+        </div>
+
+        <div class="panel" id="status-panel">
+            <h1>交互控制台 <span class="badge">LOCAL AI</span></h1>
+            
+            <div class="status-row">
+                <span class="label">识别结果:</span>
+                <span class="value" id="gesture-value">等待手势...</span>
+            </div>
+            <div class="status-row">
+                <span class="label">当前形态:</span>
+                <span class="value" id="shape-value">CHRISTMAS TREE</span>
+            </div>
+            <div class="status-row">
+                <span class="label">置信度:</span>
+                <span class="value" id="confidence-value">0%</span>
+            </div>
+
+            <div class="guide-list">
+                <div class="guide-item">✊ <span>握拳 (Closed_Fist)</span> -> 圣诞树聚合</div>
+                <div class="guide-item">🖐 <span>张手 (Open_Palm)</span> -> 粒子散开</div>
+                <div class="guide-item">☝️ <span>食指 (Pointing_Up)</span> -> 变星星</div>
+                <div class="guide-item">✌️ <span>V手势 (Victory)</span> -> 变光环隧道</div>
+                <div class="guide-item">👍 <span>点赞 (Thumb_Up)</span> -> 烟花爆炸</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import {
+            GestureRecognizer,
+            FilesetResolver,
+            DrawingUtils
+        } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3";
+
+        // ================= 配置 =================
+        const CONFIG = {
+            particleCount: 5000, // 粒子数量
+            lerpSpeed: 0.04,     // 变形速度
+            colors: {
+                tree: [0x00ff88, 0xff0000, 0xffd700], // 绿, 红, 金
+                cloud: [0xaaccff, 0xffffff],
+                star: [0xffd700, 0xffaa00],
+                ring: [0x00aaff, 0xff00ff]
+            }
+        };
+
+        let gestureRecognizer;
+        let runningMode = "VIDEO";
+        let webcamRunning = false;
+        
+        // 状态管理
+        let currentState = 'tree';
+        let isExploding = false;
+        
+        // Three.js 变量
+        let scene, camera, renderer, particles, geometry;
+        let positionsOriginal, positionsTarget, colorsTarget;
+        let explosionVelocities = [];
+
+        // UI 元素
+        const video = document.getElementById("webcam");
+        const canvasElement = document.getElementById("output_canvas");
+        const canvasCtx = canvasElement.getContext("2d");
+        const loadingDiv = document.getElementById("loading");
+        const startBtn = document.getElementById("start-btn");
+        const loadingText = document.getElementById("loading-text");
+        const gestureDisplay = document.getElementById("gesture-value");
+        const shapeDisplay = document.getElementById("shape-value");
+        const confDisplay = document.getElementById("confidence-value");
+
+        // ================= 1. 初始化 AI 模型 =================
+        const createGestureRecognizer = async () => {
+            try {
+                const vision = await FilesetResolver.forVisionTasks(
+                    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+                );
+                gestureRecognizer = await GestureRecognizer.createFromOptions(vision, {
+                    baseOptions: {
+                        modelAssetPath:
+                            "https://storage.googleapis.com/mediapipe-models/gesture_recognizer/gesture_recognizer/float16/1/gesture_recognizer.task",
+                        delegate: "GPU"
+                    },
+                    runningMode: runningMode,
+                    numHands: 1
+                });
+                
+                loadingText.innerHTML = "模型加载完毕!<br>请点击下方按钮启动";
+                document.querySelector('.spinner').style.display = 'none';
+                startBtn.style.display = 'inline-block';
+            } catch (err) {
+                loadingText.innerHTML = "模型加载失败<br>请检查网络或使用 Live Server";
+                console.error(err);
+            }
+        };
+
+        createGestureRecognizer();
+
+        // ================= 2. 摄像头与预测循环 =================
+        startBtn.addEventListener("click", () => {
+            loadingDiv.style.display = 'none';
+            initThreeJS();
+            enableCam();
+        });
+
+        function enableCam() {
+            if (!gestureRecognizer) return;
+
+            navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+                video.srcObject = stream;
+                video.addEventListener("loadeddata", predictWebcam);
+            });
+        }
+
+        let lastVideoTime = -1;
+        
+        async function predictWebcam() {
+            const videoWidth = video.videoWidth;
+            const videoHeight = video.videoHeight;
+            
+            // 调整 canvas 尺寸匹配视频
+            if (canvasElement.width !== videoWidth) {
+                canvasElement.width = videoWidth;
+                canvasElement.height = videoHeight;
+            }
+
+            let startTimeMs = performance.now();
+            if (lastVideoTime !== video.currentTime) {
+                lastVideoTime = video.currentTime;
+                
+                // 核心：AI 识别
+                const results = gestureRecognizer.recognizeForVideo(video, startTimeMs);
+
+                canvasCtx.save();
+                canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+                if (results.landmarks) {
+                    // 绘制骨架
+                    for (const landmarks of results.landmarks) {
+                        const drawingUtils = new DrawingUtils(canvasCtx);
+                        drawingUtils.drawConnectors(landmarks, GestureRecognizer.HAND_CONNECTIONS, { color: "#00FF00", lineWidth: 3 });
+                        drawingUtils.drawLandmarks(landmarks, { color: "#FF0000", lineWidth: 1 });
+                    }
+                }
+
+                // 处理手势结果
+                if (results.gestures.length > 0) {
+                    const gesture = results.gestures[0][0];
+                    const category = gesture.categoryName;
+                    const score = Math.round(gesture.score * 100);
+
+                    updateUI(category, score);
+                    handleGesture(category);
+                } else {
+                    updateUI("No Hand", 0);
+                }
+                canvasCtx.restore();
+            }
+
+            window.requestAnimationFrame(predictWebcam);
+        }
+
+        // ================= 3. 逻辑映射 =================
+        function updateUI(category, score) {
+            gestureDisplay.innerText = category;
+            confDisplay.innerText = score + "%";
+            
+            // 颜色高亮
+            if(score > 60) gestureDisplay.style.color = "#4db6ac";
+            else gestureDisplay.style.color = "#888";
+        }
+
+        function handleGesture(category) {
+            // MediaPipe 默认类别: "Closed_Fist", "Open_Palm", "Pointing_Up", "Thumb_Down", "Thumb_Up", "Victory", "ILoveYou"
+            
+            switch(category) {
+                case "Closed_Fist":
+                    setTargetShape('tree');
+                    break;
+                case "Open_Palm":
+                    setTargetShape('cloud');
+                    break;
+                case "Pointing_Up":
+                    setTargetShape('star');
+                    break;
+                case "Victory":
+                    setTargetShape('ring');
+                    break;
+                case "Thumb_Up": // 用点赞代替挥手，更容易识别
+                case "ILoveYou":
+                    triggerExplosion();
+                    break;
+            }
+        }
+
+        // ================= 4. Three.js 粒子系统 (完整版) =================
+        function initThreeJS() {
+            const container = document.getElementById('canvas-container');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050505, 0.02);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 16);
+            camera.lookAt(0, 4, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // 光照
+            scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+            const pLight = new THREE.PointLight(0xffaa00, 1.5, 50);
+            pLight.position.set(0, 10, 5);
+            scene.add(pLight);
+
+            createParticles();
+            window.addEventListener('resize', onWindowResize, false);
+            animate();
+        }
+
+        function createParticles() {
+            geometry = new THREE.BufferGeometry();
+            positionsOriginal = new Float32Array(CONFIG.particleCount * 3);
+            positionsTarget = new Float32Array(CONFIG.particleCount * 3);
+            const colors = new Float32Array(CONFIG.particleCount * 3);
+            colorsTarget = new Float32Array(CONFIG.particleCount * 3);
+
+            const treeData = generateTreeShape();
+            
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const idx = i * 3;
+                positionsOriginal[idx] = treeData.positions[idx];
+                positionsOriginal[idx+1] = treeData.positions[idx+1];
+                positionsOriginal[idx+2] = treeData.positions[idx+2];
+                
+                positionsTarget[idx] = positionsOriginal[idx];
+                positionsTarget[idx+1] = positionsOriginal[idx+1];
+                positionsTarget[idx+2] = positionsOriginal[idx+2];
+
+                colors[idx] = treeData.colors[idx];
+                colors[idx+1] = treeData.colors[idx+1];
+                colors[idx+2] = treeData.colors[idx+2];
+                
+                colorsTarget[idx] = colors[idx];
+                colorsTarget[idx+1] = colors[idx+1];
+                colorsTarget[idx+2] = colors[idx+2];
+
+                explosionVelocities.push(new THREE.Vector3(0,0,0));
+            }
+
+            geometry.setAttribute('position', new THREE.BufferAttribute(positionsOriginal, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+            const material = new THREE.PointsMaterial({
+                size: 0.18,
+                vertexColors: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.9,
+                map: createTexture()
+            });
+
+            particles = new THREE.Points(geometry, material);
+            scene.add(particles);
+        }
+
+        // --- 形状算法 ---
+        function generateTreeShape() {
+            const pos = [], col = [];
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const h = (i/CONFIG.particleCount)*16 - 6; 
+                const r = (10 - h)*0.35 * Math.random();
+                const a = i * 0.1;
+                pos.push(Math.cos(a)*r, h, Math.sin(a)*r);
+                
+                // 圣诞树颜色
+                if(Math.random() > 0.9) {
+                    Math.random() > 0.5 ? col.push(1,0,0) : col.push(1,0.84,0); // 红/金
+                } else {
+                    col.push(0.1, 0.8 + Math.random()*0.2, 0.3); // 绿
+                }
+            }
+            return { positions: pos, colors: col };
+        }
+
+        function generateCloudShape() {
+            const pos = [], col = [];
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const r = 14 * Math.cbrt(Math.random());
+                const theta = Math.random()*2*Math.PI, phi = Math.acos(2*Math.random()-1);
+                pos.push(r*Math.sin(phi)*Math.cos(theta), r*Math.sin(phi)*Math.sin(theta)+2, r*Math.cos(phi));
+                col.push(0.8, 0.9, 1.0); // 浅蓝白
+            }
+            return { positions: pos, colors: col };
+        }
+
+        function generateStarShape() {
+            const pos = [], col = [];
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const rRaw = Math.random() * 7;
+                const angle = Math.random() * Math.PI * 2;
+                const starMod = 1 + 0.6 * Math.sin(angle * 5); // 五角星公式
+                const r = rRaw * (Math.random() > 0.6 ? starMod : starMod * 0.3); 
+                pos.push(r * Math.cos(angle), r * Math.sin(angle) + 4, (Math.random() - 0.5));
+                col.push(1.0, 0.8 + Math.random()*0.2, 0.1); // 金黄
+            }
+            return { positions: pos, colors: col };
+        }
+
+        function generateRingShape() {
+            const pos = [], col = [];
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const r = 4 + Math.floor(Math.random()*4)*3;
+                const a = Math.random()*Math.PI*2;
+                pos.push(r*Math.cos(a), (Math.random()-0.5)*12, r*Math.sin(a));
+                col.push(0.1, 0.4, 1.0); // 赛博蓝
+            }
+            return { positions: pos, colors: col };
+        }
+
+        // --- 动画与交互 ---
+        function setTargetShape(type) {
+            if (currentState === type && !isExploding) return;
+            currentState = type;
+            isExploding = false;
+            shapeDisplay.innerText = type.toUpperCase().replace('_', ' ');
+
+            let data;
+            if (type === 'tree') data = generateTreeShape();
+            else if (type === 'cloud') data = generateCloudShape();
+            else if (type === 'star') data = generateStarShape();
+            else if (type === 'ring') data = generateRingShape();
+            else return;
+
+            for (let i = 0; i < CONFIG.particleCount * 3; i++) {
+                positionsTarget[i] = data.positions[i];
+                colorsTarget[i] = data.colors[i];
+            }
+        }
+
+        function triggerExplosion() {
+            if (isExploding) return;
+            isExploding = true;
+            shapeDisplay.innerText = "EXPLOSION!";
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                explosionVelocities[i].set(
+                    (Math.random() - 0.5) * 2.5,
+                    (Math.random() - 0.5) * 2.5,
+                    (Math.random() - 0.5) * 2.5
+                );
+            }
+            // 1.2秒后自动恢复
+            setTimeout(() => { isExploding = false; setTargetShape(currentState); }, 1200);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = Date.now() * 0.001;
+            const pos = geometry.attributes.position.array;
+            const col = geometry.attributes.color.array;
+            
+            // 整体旋转
+            particles.rotation.y += 0.002;
+
+            for (let i = 0; i < CONFIG.particleCount; i++) {
+                const idx = i * 3;
+                
+                if (isExploding) {
+                    pos[idx] += explosionVelocities[i].x;
+                    pos[idx+1] += explosionVelocities[i].y;
+                    pos[idx+2] += explosionVelocities[i].z;
+                    explosionVelocities[i].multiplyScalar(0.94); // 阻力
+                } else {
+                    // 线性插值 (Lerp) 平滑过渡
+                    pos[idx] += (positionsTarget[idx] - pos[idx]) * CONFIG.lerpSpeed;
+                    pos[idx+1] += (positionsTarget[idx+1] - pos[idx+1]) * CONFIG.lerpSpeed;
+                    pos[idx+2] += (positionsTarget[idx+2] - pos[idx+2]) * CONFIG.lerpSpeed;
+                }
+
+                // 颜色过渡
+                col[idx] += (colorsTarget[idx] - col[idx]) * CONFIG.lerpSpeed;
+                col[idx+1] += (colorsTarget[idx+1] - col[idx+1]) * CONFIG.lerpSpeed;
+                col[idx+2] += (colorsTarget[idx+2] - col[idx+2]) * CONFIG.lerpSpeed;
+
+                // 呼吸特效
+                if (!isExploding) pos[idx+1] += Math.sin(time * 3 + i) * 0.005;
+            }
+
+            geometry.attributes.position.needsUpdate = true;
+            geometry.attributes.color.needsUpdate = true;
+            renderer.render(scene, camera);
+        }
+
+        function createTexture() {
+            const cvs = document.createElement('canvas'); cvs.width=32; cvs.height=32;
+            const c = cvs.getContext('2d');
+            const g = c.createRadialGradient(16,16,0,16,16,16);
+            g.addColorStop(0,'rgba(255,255,255,1)'); 
+            g.addColorStop(1,'rgba(255,255,255,0)');
+            c.fillStyle=g; c.fillRect(0,0,32,32);
+            const tex = new THREE.Texture(cvs); tex.needsUpdate=true; return tex;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>
